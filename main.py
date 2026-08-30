@@ -2,22 +2,41 @@ from fastapi import FastAPI, HTTPException, Depends
 from pydantic import BaseModel
 from typing import Optional
 from sqlalchemy.orm import Session
+from enum import Enum
+from datetime import datetime
 
 from database import SessionLocal
 from models import Ticket
 
 app = FastAPI()
 
+class Priority(str, Enum):
+    low = "low"
+    medium = "medium"
+    high = "high"
 
 class SupportTicketCreate(BaseModel):
     title: str
     description: str
-    priority:str
+    priority: Priority
 
 class SupportTicketUpdate(BaseModel):
     title: Optional[str] = None
     description: Optional[str] = None
     priority: Optional[str] = None
+
+
+class SupportTicketResponse(BaseModel):
+    id: int
+    title: str
+    description: str
+    priority: Priority
+    created_at: datetime
+    updated_at: datetime
+
+    model_config = {
+        "from_attributes": True
+    }
 
 
 def get_db():
@@ -38,7 +57,7 @@ def health():
     return {"status": "healthy"}
 
 
-@app.post("/tickets")
+@app.post("/tickets", status_code=201, response_model=SupportTicketResponse)
 def create_ticket(
     ticket: SupportTicketCreate,
     db: Session = Depends(get_db),
@@ -56,12 +75,20 @@ def create_ticket(
 
     return new_ticket
 
-@app.get("/tickets")
-def get_tickets(db: Session = Depends(get_db)):
-    return db.query(Ticket).all()
+@app.get("/tickets", response_model=list[SupportTicketResponse])
+def get_tickets(
+    priority: Optional[Priority] = None,
+    db: Session = Depends(get_db),
+):
+    query = db.query(Ticket)
+
+    if priority:
+        query = query.filter(Ticket.priority == priority.value)
+
+    return query.all()
 
 
-@app.get("/tickets/{ticket_id}")
+@app.get("/tickets/{ticket_id}", response_model=SupportTicketResponse)
 def get_ticket(
     ticket_id: int,
     db: Session = Depends(get_db),
