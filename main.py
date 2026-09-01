@@ -8,7 +8,7 @@ from datetime import datetime
 from database import SessionLocal, Base, engine
 from models import Ticket
 
-Base.metadata.create_all(bind=engine)
+# Base.metadata.create_all(bind=engine)
 
 app = FastAPI()
 

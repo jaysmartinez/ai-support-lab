@@ -17,3 +17,4 @@ class Ticket(Base):
         default=datetime.utcnow,
         onupdate=datetime.utcnow,
     )
+    category = Column(String(100), nullable=True)
