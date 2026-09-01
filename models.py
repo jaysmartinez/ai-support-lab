@@ -10,6 +10,7 @@ class Ticket(Base):
     title = Column(String(255), nullable=False)
     description = Column(Text, nullable=False)
     priority = Column(String(50), nullable=False)
+    status = Column(String(50), nullable=False, default="open")
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(
         DateTime,

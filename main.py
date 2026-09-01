@@ -17,22 +17,29 @@ class Priority(str, Enum):
     medium = "medium"
     high = "high"
 
+class TicketStatus(str, Enum):
+    open = "open"
+    in_progress = "in_progress"
+    resolved = "resolved"
+
 class SupportTicketCreate(BaseModel):
     title: str
     description: str
     priority: Priority
+    status: TicketStatus = TicketStatus.open
 
 class SupportTicketUpdate(BaseModel):
     title: Optional[str] = None
     description: Optional[str] = None
-    priority: Optional[str] = None
-
+    priority: Optional[Priority] = None
+    status: Optional[TicketStatus] = None
 
 class SupportTicketResponse(BaseModel):
     id: int
     title: str
     description: str
     priority: Priority
+    status: TicketStatus
     created_at: datetime
     updated_at: datetime
 
@@ -68,7 +75,8 @@ def create_ticket(
     new_ticket = Ticket(
         title=ticket.title,
         description=ticket.description,
-        priority=ticket.priority,
+        priority=ticket.priority.value,
+        status=ticket.status.value,
     )
 
     db.add(new_ticket)
@@ -80,12 +88,16 @@ def create_ticket(
 @app.get("/tickets", response_model=list[SupportTicketResponse])
 def get_tickets(
     priority: Optional[Priority] = None,
+    status: Optional[TicketStatus] = None,
     db: Session = Depends(get_db),
 ):
     query = db.query(Ticket)
 
     if priority:
         query = query.filter(Ticket.priority == priority.value)
+
+    if status:
+        query = query.filter(Ticket.status == status.value)
 
     return query.all()
 
