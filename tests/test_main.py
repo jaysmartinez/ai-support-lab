@@ -160,3 +160,74 @@ def test_invalid_priority():
     )
 
     assert response.status_code == 422
+
+
+def test_create_ticket_note():
+    ticket_response = client.post(
+        "/tickets",
+        json={
+            "title": "Payment issue",
+            "description": "Customer cannot complete payment",
+            "priority": "high",
+        },
+    )
+
+    ticket_id = ticket_response.json()["id"]
+
+    response = client.post(
+        f"/tickets/{ticket_id}/notes",
+        json={
+            "content": "Issue reproduced in Chrome."
+        },
+    )
+
+    assert response.status_code == 201
+    data = response.json()
+
+    assert data["ticket_id"] == ticket_id
+    assert data["content"] == "Issue reproduced in Chrome."
+
+
+def test_get_ticket_notes():
+    ticket_response = client.post(
+        "/tickets",
+        json={
+            "title": "Login issue",
+            "description": "Customer cannot log in",
+            "priority": "medium",
+        },
+    )
+
+    ticket_id = ticket_response.json()["id"]
+
+    client.post(
+        f"/tickets/{ticket_id}/notes",
+        json={"content": "Reset password attempted."},
+    )
+
+    client.post(
+        f"/tickets/{ticket_id}/notes",
+        json={"content": "Escalated to engineering."},
+    )
+
+    response = client.get(f"/tickets/{ticket_id}/notes")
+
+    assert response.status_code == 200
+
+    notes = response.json()
+
+    assert len(notes) == 2
+    assert notes[0]["content"] == "Reset password attempted."
+    assert notes[1]["content"] == "Escalated to engineering."
+
+
+def test_create_note_for_missing_ticket():
+    response = client.post(
+        "/tickets/999999/notes",
+        json={
+            "content": "This note should not be created."
+        },
+    )
+
+    assert response.status_code == 404
+    assert response.json()["detail"] == "Ticket not found"

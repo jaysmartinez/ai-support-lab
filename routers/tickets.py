@@ -4,13 +4,15 @@ from sqlalchemy.orm import Session
 from typing import Optional
 
 from database import get_db
-from models import Ticket
+from models import Ticket, TicketNote
 from schemas import (
     Priority,
     TicketStatus,
     SupportTicketCreate,
     SupportTicketUpdate,
     SupportTicketResponse,
+    TicketNoteCreate,
+    TicketNoteResponse,
 )
 
 router = APIRouter(
@@ -37,6 +39,7 @@ def create_ticket(
     db.refresh(new_ticket)
 
     return new_ticket
+
 
 @router.get("", response_model=list[SupportTicketResponse])
 def get_tickets(
@@ -90,7 +93,6 @@ def update_ticket(
     return ticket
 
 
-
 @router.delete("/{ticket_id}")
 def delete_ticket(
     ticket_id: int,
@@ -105,3 +107,52 @@ def delete_ticket(
     db.commit()
 
     return {"message": "Ticket deleted"}
+
+
+@router.post(
+    "/{ticket_id}/notes",
+    status_code=201,
+    response_model=TicketNoteResponse,
+)
+def create_ticket_note(
+    ticket_id: int,
+    note: TicketNoteCreate,
+    db: Session = Depends(get_db),
+):
+    ticket = db.query(Ticket).filter(Ticket.id == ticket_id).first()
+
+    if not ticket:
+        raise HTTPException(status_code=404, detail="Ticket not found")
+
+    new_note = TicketNote(
+        ticket_id=ticket_id,
+        content=note.content,
+    )
+
+    db.add(new_note)
+    db.commit()
+    db.refresh(new_note)
+
+    return new_note
+
+
+@router.get(
+    "/{ticket_id}/notes",
+    response_model=list[TicketNoteResponse],
+)
+def get_ticket_notes(
+    ticket_id: int,
+    db: Session = Depends(get_db),
+):
+    ticket = db.query(Ticket).filter(Ticket.id == ticket_id).first()
+
+    if not ticket:
+        raise HTTPException(status_code=404, detail="Ticket not found")
+
+    notes = (
+        db.query(TicketNote)
+        .filter(TicketNote.ticket_id == ticket_id)
+        .all()
+    )
+
+    return notes

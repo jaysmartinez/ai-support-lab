@@ -1,5 +1,5 @@
 from datetime import datetime
-from sqlalchemy import Column, Integer, String, Text, DateTime
+from sqlalchemy import Column, Integer, String, Text, DateTime, ForeignKey
 from database import Base
 
 
@@ -18,3 +18,22 @@ class Ticket(Base):
         onupdate=datetime.utcnow,
     )
     category = Column(String(100), nullable=True)
+
+
+class TicketNote(Base):
+    __tablename__ = "ticket_notes"
+
+    id = Column(Integer, primary_key=True, index=True)
+
+    ticket_id = Column(
+        Integer,
+        ForeignKey("tickets.id"),
+        nullable=False,
+    )
+
+    content = Column(Text, nullable=False)
+
+    created_at = Column(
+        DateTime,
+        default=datetime.utcnow,
+    )

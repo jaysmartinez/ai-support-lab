@@ -38,3 +38,15 @@ class SupportTicketResponse(BaseModel):
     model_config = {
         "from_attributes": True
     }
+
+class TicketNoteCreate(BaseModel):
+    content: str
+
+
+class TicketNoteResponse(BaseModel):
+    id: int
+    ticket_id: int
+    content: str
+    created_at: datetime
+
+    model_config = {"from_attributes": True}
