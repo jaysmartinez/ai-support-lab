@@ -2,7 +2,8 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from typing import Optional
-from database import SessionLocal
+
+from database import get_db
 from models import Ticket
 from schemas import (
     Priority,
@@ -16,14 +17,6 @@ router = APIRouter(
     prefix="/tickets",
     tags=["tickets"],
 )
-
-
-def get_db():
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
 
 
 @router.post("", status_code=201, response_model=SupportTicketResponse)

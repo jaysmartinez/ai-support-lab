@@ -5,7 +5,7 @@ from sqlalchemy.pool import StaticPool
 
 from database import Base
 from main import app
-from routers.tickets import get_db
+from database import get_db
 
 TEST_DATABASE_URL = "sqlite://"
 
