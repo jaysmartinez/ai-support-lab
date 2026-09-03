@@ -231,3 +231,54 @@ def test_create_note_for_missing_ticket():
 
     assert response.status_code == 404
     assert response.json()["detail"] == "Ticket not found"
+
+
+def test_get_ticket_includes_notes():
+    ticket_response = client.post(
+        "/tickets",
+        json={
+            "title": "Checkout issue",
+            "description": "Customer cannot complete checkout",
+            "priority": "high",
+        },
+    )
+
+    ticket_id = ticket_response.json()["id"]
+
+    client.post(
+        f"/tickets/{ticket_id}/notes",
+        json={"content": "Issue reproduced on mobile."},
+    )
+
+    response = client.get(f"/tickets/{ticket_id}")
+
+    assert response.status_code == 200
+
+    data = response.json()
+
+    assert "notes" in data
+    assert len(data["notes"]) == 1
+    assert data["notes"][0]["content"] == "Issue reproduced on mobile."
+
+
+def test_ticket_pagination():
+    for i in range(5):
+        client.post(
+            "/tickets",
+            json={
+                "title": f"Pagination Ticket {i}",
+                "description": "Testing pagination",
+                "priority": "low",
+            },
+        )
+
+    response = client.get("/tickets?limit=2&offset=0")
+
+    assert response.status_code == 200
+    assert len(response.json()) == 2
+
+
+def test_ticket_pagination_limit_validation():
+    response = client.get("/tickets?limit=101")
+
+    assert response.status_code == 422

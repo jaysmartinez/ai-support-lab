@@ -1,6 +1,7 @@
 from datetime import datetime
 from sqlalchemy import Column, Integer, String, Text, DateTime, ForeignKey
 from database import Base
+from sqlalchemy.orm import relationship
 
 
 class Ticket(Base):
@@ -18,7 +19,11 @@ class Ticket(Base):
         onupdate=datetime.utcnow,
     )
     category = Column(String(100), nullable=True)
-
+    notes = relationship(
+        "TicketNote",
+        back_populates="ticket",
+        cascade="all, delete-orphan",
+    )
 
 class TicketNote(Base):
     __tablename__ = "ticket_notes"
@@ -36,4 +41,9 @@ class TicketNote(Base):
     created_at = Column(
         DateTime,
         default=datetime.utcnow,
+    )
+
+    ticket = relationship(
+        "Ticket",
+        back_populates="notes",
     )

@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
 from typing import Optional
@@ -11,6 +11,7 @@ from schemas import (
     SupportTicketCreate,
     SupportTicketUpdate,
     SupportTicketResponse,
+    SupportTicketWithNotes,
     TicketNoteCreate,
     TicketNoteResponse,
 )
@@ -45,6 +46,8 @@ def create_ticket(
 def get_tickets(
     priority: Optional[Priority] = None,
     status: Optional[TicketStatus] = None,
+    limit: int = Query(default=10, ge=1, le=100),
+    offset: int = Query(default=0, ge=0),
     db: Session = Depends(get_db),
 ):
     query = db.query(Ticket)
@@ -55,10 +58,10 @@ def get_tickets(
     if status:
         query = query.filter(Ticket.status == status.value)
 
-    return query.all()
+    return query.offset(offset).limit(limit).all()
 
 
-@router.get("/{ticket_id}", response_model=SupportTicketResponse)
+@router.get("/{ticket_id}", response_model=SupportTicketWithNotes)
 def get_ticket(
     ticket_id: int,
     db: Session = Depends(get_db),
