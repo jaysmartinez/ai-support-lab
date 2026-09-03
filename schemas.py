@@ -56,3 +56,9 @@ class SupportTicketWithNotes(SupportTicketResponse):
     notes: list[TicketNoteResponse] = []
 
     model_config = {"from_attributes": True}
+
+
+class TicketSort(str, Enum):
+    created_at = "created_at"
+    created_at_desc = "-created_at"
+    priority = "priority"

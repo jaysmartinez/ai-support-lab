@@ -282,3 +282,44 @@ def test_ticket_pagination_limit_validation():
     response = client.get("/tickets?limit=101")
 
     assert response.status_code == 422
+
+
+def test_search_tickets():
+    client.post(
+        "/tickets",
+        json={
+            "title": "Stripe payment failure",
+            "description": "Customer cannot complete checkout",
+            "priority": "high",
+        },
+    )
+
+    response = client.get("/tickets?search=Stripe")
+
+    assert response.status_code == 200
+
+    tickets = response.json()
+
+    assert len(tickets) >= 1
+    assert any(
+        "Stripe" in ticket["title"]
+        for ticket in tickets
+    )
+
+
+def test_sort_tickets_by_created_at_desc():
+    response = client.get("/tickets?sort=-created_at")
+
+    assert response.status_code == 200
+
+    tickets = response.json()
+
+    dates = [ticket["created_at"] for ticket in tickets]
+
+    assert dates == sorted(dates, reverse=True)
+
+
+def test_invalid_ticket_sort():
+    response = client.get("/tickets?sort=banana")
+
+    assert response.status_code == 422

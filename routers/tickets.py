@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
+from sqlalchemy import or_
 from sqlalchemy.orm import Session
 
 from typing import Optional
@@ -8,6 +9,7 @@ from models import Ticket, TicketNote
 from schemas import (
     Priority,
     TicketStatus,
+    TicketSort,
     SupportTicketCreate,
     SupportTicketUpdate,
     SupportTicketResponse,
@@ -46,6 +48,8 @@ def create_ticket(
 def get_tickets(
     priority: Optional[Priority] = None,
     status: Optional[TicketStatus] = None,
+    search: Optional[str] = None,
+    sort: Optional[TicketSort] = None,
     limit: int = Query(default=10, ge=1, le=100),
     offset: int = Query(default=0, ge=0),
     db: Session = Depends(get_db),
@@ -57,6 +61,23 @@ def get_tickets(
 
     if status:
         query = query.filter(Ticket.status == status.value)
+
+    if search:
+        query = query.filter(
+            or_(
+                Ticket.title.ilike(f"%{search}%"),
+                Ticket.description.ilike(f"%{search}%"),
+            )
+        )
+
+    if sort == TicketSort.created_at:
+        query = query.order_by(Ticket.created_at.asc())
+
+    elif sort == TicketSort.created_at_desc:
+        query = query.order_by(Ticket.created_at.desc())
+
+    elif sort == TicketSort.priority:
+        query = query.order_by(Ticket.priority.asc())
 
     return query.offset(offset).limit(limit).all()
 
