@@ -62,3 +62,16 @@ class TicketSort(str, Enum):
     created_at = "created_at"
     created_at_desc = "-created_at"
     priority = "priority"
+
+
+class UserCreate(BaseModel):
+    email: str
+    password: str
+
+
+class UserResponse(BaseModel):
+    id: int
+    email: str
+    created_at: datetime
+
+    model_config = {"from_attributes": True}
