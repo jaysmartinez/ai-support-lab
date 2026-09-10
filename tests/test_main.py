@@ -4,8 +4,11 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
 from database import Base
+from models import Customer
 from main import app
 from database import get_db
+
+from datetime import date, datetime, timezone
 
 TEST_DATABASE_URL = "sqlite://"
 
@@ -323,3 +326,81 @@ def test_invalid_ticket_sort():
     response = client.get("/tickets?sort=banana")
 
     assert response.status_code == 422
+
+
+def test_get_customers_with_ordering_and_filtering():
+    now = datetime(2026, 9, 9, tzinfo=timezone.utc)
+
+    risky_customer = Customer(
+        name="Risky Customer Test",
+        industry="fintech",
+        account_owner="Jordan Lee",
+        payment_volume=25000,
+        payment_volume_change_30d=-30,
+        product_usage=75,
+        product_usage_change_30d=-25,
+        open_support_tickets=5,
+        last_login_at=now,
+        features_adopted=3,
+        total_available_features=10,
+        renewal_date=date(2026, 11, 1),
+        health_score=35,
+        risk_level="high",
+        created_at=now,
+        updated_at=now,
+    )
+
+    healthy_customer = Customer(
+        name="Healthy Customer Test",
+        industry="insurance",
+        account_owner="Morgan Smith",
+        payment_volume=125000,
+        payment_volume_change_30d=20,
+        product_usage=500,
+        product_usage_change_30d=15,
+        open_support_tickets=0,
+        last_login_at=now,
+        features_adopted=9,
+        total_available_features=10,
+        renewal_date=date(2027, 3, 1),
+        health_score=90,
+        risk_level="healthy",
+        created_at=now,
+        updated_at=now,
+    )
+
+    db = TestingSessionLocal()
+
+    try:
+        db.add_all([risky_customer, healthy_customer])
+        db.commit()
+
+        response = client.get("/customers")
+
+        assert response.status_code == 200
+
+        data = response.json()
+
+        assert data["total"] == 2
+        assert data["items"][0]["name"] == "Risky Customer Test"
+        assert data["items"][1]["name"] == "Healthy Customer Test"
+
+        filtered_response = client.get(
+            "/customers",
+            params={"risk_level": "high"},
+        )
+
+        assert filtered_response.status_code == 200
+
+        filtered_data = filtered_response.json()
+
+        assert filtered_data["total"] == 1
+        assert filtered_data["items"][0]["name"] == "Risky Customer Test"
+    finally:
+        db.query(Customer).filter(
+            Customer.name.in_(
+                ["Risky Customer Test", "Healthy Customer Test"]
+            )
+        ).delete(synchronize_session=False)
+        db.commit()
+        db.close()

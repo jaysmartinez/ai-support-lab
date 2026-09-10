@@ -1,8 +1,11 @@
-from datetime import datetime
+from datetime import date, datetime
+from decimal import Decimal
 from enum import Enum
 from typing import Optional
 
 from pydantic import BaseModel
+
+from services.health_score import RiskLevel
 
 class Priority(str, Enum):
     low = "low"
@@ -75,3 +78,38 @@ class UserResponse(BaseModel):
     created_at: datetime
 
     model_config = {"from_attributes": True}
+
+
+class CustomerResponse(BaseModel):
+    id: int
+    name: str
+    industry: str
+    account_owner: str
+
+    payment_volume: Decimal
+    payment_volume_change_30d: float
+
+    product_usage: int
+    product_usage_change_30d: float
+
+    open_support_tickets: int
+    last_login_at: datetime
+
+    features_adopted: int
+    total_available_features: int
+
+    renewal_date: date
+    health_score: int
+    risk_level: RiskLevel
+
+    created_at: datetime
+    updated_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
+class CustomerListResponse(BaseModel):
+    items: list[CustomerResponse]
+    total: int
+    limit: int
+    offset: int

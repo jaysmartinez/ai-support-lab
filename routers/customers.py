@@ -1,0 +1,51 @@
+from typing import Optional
+
+from fastapi import APIRouter, Depends, Query
+from sqlalchemy.orm import Session
+
+from database import get_db
+from models import Customer
+from schemas import CustomerListResponse
+from services.health_score import RiskLevel
+
+
+router = APIRouter(
+    prefix="/customers",
+    tags=["customers"],
+)
+
+
+@router.get("", response_model=CustomerListResponse)
+def get_customers(
+    risk_level: Optional[RiskLevel] = None,
+    search: Optional[str] = None,
+    limit: int = Query(default=20, ge=1, le=100),
+    offset: int = Query(default=0, ge=0),
+    db: Session = Depends(get_db),
+):
+    query = db.query(Customer)
+
+    if risk_level is not None:
+        query = query.filter(Customer.risk_level == risk_level.value)
+
+    if search:
+        query = query.filter(Customer.name.ilike(f"%{search}%"))
+
+    total = query.count()
+
+    customers = (
+        query.order_by(
+            Customer.health_score.asc(),
+            Customer.name.asc(),
+        )
+        .offset(offset)
+        .limit(limit)
+        .all()
+    )
+
+    return {
+        "items": customers,
+        "total": total,
+        "limit": limit,
+        "offset": offset,
+    }
