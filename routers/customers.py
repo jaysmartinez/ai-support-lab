@@ -1,11 +1,11 @@
 from typing import Optional
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
 from database import get_db
 from models import Customer
-from schemas import CustomerListResponse
+from schemas import CustomerListResponse, CustomerResponse
 from services.health_score import RiskLevel
 
 
@@ -49,3 +49,23 @@ def get_customers(
         "limit": limit,
         "offset": offset,
     }
+
+
+@router.get("/{customer_id}", response_model=CustomerResponse)
+def get_customer(
+    customer_id: int,
+    db: Session = Depends(get_db),
+):
+    customer = (
+        db.query(Customer)
+        .filter(Customer.id == customer_id)
+        .first()
+    )
+
+    if customer is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Customer not found",
+        )
+
+    return customer

@@ -396,6 +396,26 @@ def test_get_customers_with_ordering_and_filtering():
 
         assert filtered_data["total"] == 1
         assert filtered_data["items"][0]["name"] == "Risky Customer Test"
+
+        detail_response = client.get(
+            f"/customers/{risky_customer.id}"
+        )
+
+        assert detail_response.status_code == 200
+
+        detail_data = detail_response.json()
+
+        assert detail_data["id"] == risky_customer.id
+        assert detail_data["name"] == "Risky Customer Test"
+        assert detail_data["health_score"] == 35
+        assert detail_data["risk_level"] == "high"
+
+        missing_response = client.get("/customers/999999")
+
+        assert missing_response.status_code == 404
+        assert missing_response.json() == {
+            "detail": "Customer not found"
+        }
     finally:
         db.query(Customer).filter(
             Customer.name.in_(
