@@ -416,6 +416,16 @@ def test_get_customers_with_ordering_and_filtering():
         assert missing_response.json() == {
             "detail": "Customer not found"
         }
+
+        summary_response = client.get("/customers/summary")
+
+        assert summary_response.status_code == 200
+        assert summary_response.json() == {
+            "total_customers": 2,
+            "high_risk_customers": 1,
+            "medium_risk_customers": 0,
+            "healthy_customers": 1,
+        }
     finally:
         db.query(Customer).filter(
             Customer.name.in_(

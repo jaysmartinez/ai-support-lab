@@ -113,3 +113,10 @@ class CustomerListResponse(BaseModel):
     total: int
     limit: int
     offset: int
+
+
+class CustomerSummaryResponse(BaseModel):
+    total_customers: int
+    high_risk_customers: int
+    medium_risk_customers: int
+    healthy_customers: int

@@ -1,11 +1,16 @@
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
+from sqlalchemy import case, func
 from sqlalchemy.orm import Session
 
 from database import get_db
 from models import Customer
-from schemas import CustomerListResponse, CustomerResponse
+from schemas import (
+    CustomerListResponse,
+    CustomerResponse,
+    CustomerSummaryResponse,
+)
 from services.health_score import RiskLevel
 
 
@@ -26,10 +31,14 @@ def get_customers(
     query = db.query(Customer)
 
     if risk_level is not None:
-        query = query.filter(Customer.risk_level == risk_level.value)
+        query = query.filter(
+            Customer.risk_level == risk_level.value
+        )
 
     if search:
-        query = query.filter(Customer.name.ilike(f"%{search}%"))
+        query = query.filter(
+            Customer.name.ilike(f"%{search}%")
+        )
 
     total = query.count()
 
@@ -51,7 +60,47 @@ def get_customers(
     }
 
 
-@router.get("/{customer_id}", response_model=CustomerResponse)
+@router.get(
+    "/summary",
+    response_model=CustomerSummaryResponse,
+)
+def get_customer_summary(
+    db: Session = Depends(get_db),
+):
+    summary = db.query(
+        func.count(Customer.id).label("total"),
+        func.sum(
+            case(
+                (Customer.risk_level == "high", 1),
+                else_=0,
+            )
+        ).label("high_risk"),
+        func.sum(
+            case(
+                (Customer.risk_level == "medium", 1),
+                else_=0,
+            )
+        ).label("medium_risk"),
+        func.sum(
+            case(
+                (Customer.risk_level == "healthy", 1),
+                else_=0,
+            )
+        ).label("healthy"),
+    ).one()
+
+    return {
+        "total_customers": summary.total or 0,
+        "high_risk_customers": summary.high_risk or 0,
+        "medium_risk_customers": summary.medium_risk or 0,
+        "healthy_customers": summary.healthy or 0,
+    }
+
+
+@router.get(
+    "/{customer_id}",
+    response_model=CustomerResponse,
+)
 def get_customer(
     customer_id: int,
     db: Session = Depends(get_db),
