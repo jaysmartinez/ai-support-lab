@@ -96,6 +96,12 @@ class Customer(Base):
     created_at = Column(DateTime(timezone=True), nullable=False)
     updated_at = Column(DateTime(timezone=True), nullable=False)
 
+    follow_up_tasks = relationship(
+        "FollowUpTask",
+        back_populates="customer",
+        cascade="all, delete-orphan",
+    )
+
     __table_args__ = (
         CheckConstraint(
             "payment_volume >= 0",
@@ -128,5 +134,37 @@ class Customer(Base):
         CheckConstraint(
             "risk_level IN ('high', 'medium', 'healthy')",
             name="ck_customers_risk_level_valid",
+        ),
+    )
+
+
+class FollowUpTask(Base):
+    __tablename__ = "follow_up_tasks"
+
+    id = Column(Integer, primary_key=True, index=True)
+
+    customer_id = Column(
+        Integer,
+        ForeignKey("customers.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+
+    task_type = Column(String(100), nullable=False)
+    recommended_action = Column(Text, nullable=False)
+    status = Column(String(20), nullable=False, default="open")
+
+    created_at = Column(DateTime(timezone=True), nullable=False)
+    updated_at = Column(DateTime(timezone=True), nullable=False)
+
+    customer = relationship(
+        "Customer",
+        back_populates="follow_up_tasks",
+    )
+
+    __table_args__ = (
+        CheckConstraint(
+            "status IN ('open', 'completed', 'cancelled')",
+            name="ck_follow_up_tasks_status_valid",
         ),
     )
