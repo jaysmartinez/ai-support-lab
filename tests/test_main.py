@@ -461,6 +461,38 @@ def test_get_customers_with_ordering_and_filtering():
         )
 
         assert missing_customer_response.status_code == 404
+        
+        follow_ups_response = client.get(
+            f"/customers/{risky_customer.id}/follow-ups"
+        )
+
+        assert follow_ups_response.status_code == 200
+
+        follow_ups = follow_ups_response.json()
+
+        assert len(follow_ups) == 1
+        assert follow_ups[0]["id"] == task_data["id"]
+        assert follow_ups[0]["customer_id"] == risky_customer.id
+        assert follow_ups[0]["recommended_action"] == (
+            task_payload["recommended_action"]
+        )
+        assert follow_ups[0]["status"] == "open"
+
+        empty_response = client.get(
+            f"/customers/{healthy_customer.id}/follow-ups"
+        )
+
+        assert empty_response.status_code == 200
+        assert empty_response.json() == []
+
+        missing_follow_ups_response = client.get(
+            "/customers/999999/follow-ups"
+        )
+
+        assert missing_follow_ups_response.status_code == 404
+        assert missing_follow_ups_response.json() == {
+            "detail": "Customer not found"
+        }
 
     finally:
         test_customers = db.query(Customer).filter(

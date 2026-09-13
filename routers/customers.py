@@ -171,3 +171,33 @@ def create_follow_up(
     db.refresh(new_task)
 
     return new_task
+
+@router.get(
+    "/{customer_id}/follow-ups",
+    response_model=list[FollowUpTaskResponse],
+)
+def get_customer_follow_ups(
+    customer_id: int,
+    db: Session = Depends(get_db),
+):
+    customer = (
+        db.query(Customer)
+        .filter(Customer.id == customer_id)
+        .first()
+    )
+
+    if customer is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Customer not found",
+        )
+
+    return (
+        db.query(FollowUpTask)
+        .filter(FollowUpTask.customer_id == customer_id)
+        .order_by(
+            FollowUpTask.created_at.desc(),
+            FollowUpTask.id.desc(),
+        )
+        .all()
+    )

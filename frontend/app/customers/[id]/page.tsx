@@ -2,7 +2,13 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import FollowUpForm from "@/components/follow-up-form";
 
-import { ApiError, getCustomer, type Customer } from "@/lib/api";
+import {
+  ApiError,
+  getCustomer,
+  getCustomerFollowUps,
+  type Customer,
+  type FollowUpTask,
+} from "@/lib/api";
 
 function formatChange(value: number): string {
   return `${value > 0 ? "+" : ""}${value.toFixed(1)}%`;
@@ -46,6 +52,15 @@ export default async function CustomerPage({
         </p>
       </main>
     );
+  }
+
+  let followUps: FollowUpTask[] = [];
+  let followUpsError = false;
+
+  try {
+    followUps = await getCustomerFollowUps(customer.id);
+  } catch {
+    followUpsError = true;
   }
 
   const riskLabels = {
@@ -121,7 +136,43 @@ export default async function CustomerPage({
             </div>
           ))}
         </dl>
+        <section className="mt-8 rounded-xl border border-slate-200 bg-white p-6">
+          <h2 className="text-lg font-semibold">Saved follow-ups</h2>
 
+          {followUpsError ? (
+            <p role="alert" className="mt-3 text-sm text-red-700">
+              Unable to load follow-ups. Please refresh to try again.
+            </p>
+          ) : followUps.length === 0 ? (
+            <p className="mt-3 text-sm text-slate-600">
+              No follow-ups saved for this customer yet.
+            </p>
+          ) : (
+            <ul className="mt-4 space-y-4">
+              {followUps.map((task) => (
+                <li
+                  key={task.id}
+                  className="rounded-lg border border-slate-200 p-4"
+                >
+                  <div className="flex items-center justify-between gap-4">
+                    <p className="text-sm font-medium">Follow-up #{task.id}</p>
+                    <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium capitalize">
+                      {task.status}
+                    </span>
+                  </div>
+
+                  <p className="mt-3 whitespace-pre-wrap break-words text-sm text-slate-700">
+                    {task.recommended_action}
+                  </p>
+
+                  <p className="mt-3 text-xs text-slate-500">
+                    Created {formatDate(task.created_at)} · UTC
+                  </p>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
         {customer.health_score < 50 && (
           <FollowUpForm customerId={customer.id} />
         )}

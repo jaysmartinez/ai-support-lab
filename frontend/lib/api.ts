@@ -110,3 +110,9 @@ export async function createFollowUp(
 
   return response.json() as Promise<FollowUpTask>;
 }
+
+export async function getCustomerFollowUps(
+  customerId: number,
+): Promise<FollowUpTask[]> {
+  return getJson<FollowUpTask[]>(`/customers/${customerId}/follow-ups`);
+}

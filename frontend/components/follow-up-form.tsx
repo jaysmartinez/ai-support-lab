@@ -2,8 +2,10 @@
 
 import { useRef, useState, type FormEvent } from "react";
 import { ApiError, createFollowUp } from "@/lib/api";
+import { useRouter } from "next/navigation";
 
 export default function FollowUpForm({ customerId }: { customerId: number }) {
+  const router = useRouter();
   const [action, setAction] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -30,6 +32,7 @@ export default function FollowUpForm({ customerId }: { customerId: number }) {
       });
 
       setTaskId(task.id);
+      router.refresh();
     } catch (error) {
       if (error instanceof ApiError && error.status === 409) {
         setError("This customer is no longer eligible for a follow-up.");
