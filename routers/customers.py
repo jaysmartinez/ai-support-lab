@@ -1,15 +1,17 @@
 from typing import Optional
-
+from datetime import datetime, timezone
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import case, func
 from sqlalchemy.orm import Session
 
 from database import get_db
-from models import Customer
+from models import Customer, FollowUpTask
 from schemas import (
     CustomerListResponse,
     CustomerResponse,
     CustomerSummaryResponse,
+    FollowUpTaskCreate,
+    FollowUpTaskResponse,
 )
 from services.health_score import RiskLevel
 
@@ -118,3 +120,54 @@ def get_customer(
         )
 
     return customer
+
+@router.post(
+    "/{customer_id}/follow-ups",
+    status_code=201,
+    response_model=FollowUpTaskResponse,
+)
+def create_follow_up(
+    customer_id: int,
+    task: FollowUpTaskCreate,
+    db: Session = Depends(get_db),
+):
+    customer = (
+        db.query(Customer)
+        .filter(Customer.id == customer_id)
+        .first()
+    )
+
+    if customer is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Customer not found",
+        )
+
+    if customer.health_score >= 50:
+        raise HTTPException(
+            status_code=409,
+            detail="Follow-up creation requires a health score below 50",
+        )
+
+    now = datetime.now(timezone.utc)
+
+    new_task = FollowUpTask(
+        customer_id=customer.id,
+        task_type=task.task_type,
+        recommended_action=task.recommended_action,
+        status="open",
+        created_at=now,
+        updated_at=now,
+    )
+
+    db.add(new_task)
+
+    try:
+        db.commit()
+    except Exception:
+        db.rollback()
+        raise
+
+    db.refresh(new_task)
+
+    return new_task

@@ -426,11 +426,51 @@ def test_get_customers_with_ordering_and_filtering():
             "medium_risk_customers": 0,
             "healthy_customers": 1,
         }
+
+        task_payload = {
+            "task_type": "account_health_check",
+            "recommended_action": "Schedule a customer health review.",
+        }
+
+        create_response = client.post(
+            f"/customers/{risky_customer.id}/follow-ups",
+            json=task_payload,
+        )
+
+        assert create_response.status_code == 201
+
+        task_data = create_response.json()
+
+        assert task_data["customer_id"] == risky_customer.id
+        assert task_data["task_type"] == "account_health_check"
+        assert task_data["status"] == "open"
+        assert task_data["recommended_action"] == (
+            "Schedule a customer health review."
+        )
+
+        ineligible_response = client.post(
+            f"/customers/{healthy_customer.id}/follow-ups",
+            json=task_payload,
+        )
+
+        assert ineligible_response.status_code == 409
+
+        missing_customer_response = client.post(
+            "/customers/999999/follow-ups",
+            json=task_payload,
+        )
+
+        assert missing_customer_response.status_code == 404
+
     finally:
-        db.query(Customer).filter(
+        test_customers = db.query(Customer).filter(
             Customer.name.in_(
                 ["Risky Customer Test", "Healthy Customer Test"]
             )
-        ).delete(synchronize_session=False)
+        ).all()
+
+        for customer in test_customers:
+            db.delete(customer)
+
         db.commit()
         db.close()

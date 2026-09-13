@@ -3,7 +3,7 @@ from decimal import Decimal
 from enum import Enum
 from typing import Optional
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict, Field
 
 from services.health_score import RiskLevel
 
@@ -120,3 +120,37 @@ class CustomerSummaryResponse(BaseModel):
     high_risk_customers: int
     medium_risk_customers: int
     healthy_customers: int
+
+
+class FollowUpStatus(str, Enum):
+    open = "open"
+    completed = "completed"
+    cancelled = "cancelled"
+
+
+class FollowUpTaskCreate(BaseModel):
+    task_type: str = Field(
+        min_length=1,
+        max_length=100,
+    )
+    recommended_action: str = Field(
+        min_length=1,
+        max_length=2000,
+    )
+
+    model_config = ConfigDict(
+        str_strip_whitespace=True,
+        extra="forbid",
+    )
+
+
+class FollowUpTaskResponse(BaseModel):
+    id: int
+    customer_id: int
+    task_type: str
+    recommended_action: str
+    status: FollowUpStatus
+    created_at: datetime
+    updated_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
