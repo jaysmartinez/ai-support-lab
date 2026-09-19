@@ -34,7 +34,9 @@ export interface CustomerSummary {
   healthy_customers: number;
 }
 
-const API_BASE_URL = "http://localhost:8000";
+const API_BASE_URL = (
+  process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"
+).replace(/\/+$/, "");
 
 export class ApiError extends Error {
   constructor(public readonly status: number) {
