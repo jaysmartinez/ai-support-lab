@@ -116,3 +116,21 @@ export async function getCustomerFollowUps(
 ): Promise<FollowUpTask[]> {
   return getJson<FollowUpTask[]>(`/customers/${customerId}/follow-ups`);
 }
+
+export async function completeFollowUp(
+  customerId: number,
+  taskId: number,
+): Promise<FollowUpTask> {
+  const response = await fetch(
+    `${API_BASE_URL}/customers/${customerId}/follow-ups/${taskId}/complete`,
+    {
+      method: "PATCH",
+    },
+  );
+
+  if (!response.ok) {
+    throw new ApiError(response.status);
+  }
+
+  return response.json() as Promise<FollowUpTask>;
+}

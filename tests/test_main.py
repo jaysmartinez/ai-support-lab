@@ -46,6 +46,23 @@ def test_health():
     assert response.json() == {"status": "healthy"}
 
 
+def test_cors_allows_frontend_patch_requests():
+    response = client.options(
+        "/customers/1/follow-ups/1/complete",
+        headers={
+            "Origin": "http://localhost:3000",
+            "Access-Control-Request-Method": "PATCH",
+        },
+    )
+
+    assert response.status_code == 200
+    assert (
+        response.headers["access-control-allow-origin"]
+        == "http://localhost:3000"
+    )
+    assert "PATCH" in response.headers["access-control-allow-methods"]
+
+
 def test_create_ticket():
     response = client.post(
         "/tickets",
@@ -461,7 +478,7 @@ def test_get_customers_with_ordering_and_filtering():
         )
 
         assert missing_customer_response.status_code == 404
-        
+
         follow_ups_response = client.get(
             f"/customers/{risky_customer.id}/follow-ups"
         )
@@ -493,6 +510,37 @@ def test_get_customers_with_ordering_and_filtering():
         assert missing_follow_ups_response.json() == {
             "detail": "Customer not found"
         }
+
+        wrong_customer_response = client.patch(
+            f"/customers/{healthy_customer.id}"
+            f"/follow-ups/{task_data['id']}/complete"
+        )
+
+        assert wrong_customer_response.status_code == 404
+        assert wrong_customer_response.json() == {
+            "detail": "Follow-up not found"
+        }
+
+        complete_response = client.patch(
+            f"/customers/{risky_customer.id}"
+            f"/follow-ups/{task_data['id']}/complete"
+        )
+
+        assert complete_response.status_code == 200
+
+        completed_task = complete_response.json()
+
+        assert completed_task["id"] == task_data["id"]
+        assert completed_task["customer_id"] == risky_customer.id
+        assert completed_task["status"] == "completed"
+        assert completed_task["updated_at"] >= task_data["updated_at"]
+
+        completed_list_response = client.get(
+            f"/customers/{risky_customer.id}/follow-ups"
+        )
+
+        assert completed_list_response.status_code == 200
+        assert completed_list_response.json()[0]["status"] == "completed"
 
     finally:
         test_customers = db.query(Customer).filter(

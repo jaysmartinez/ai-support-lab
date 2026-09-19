@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import FollowUpForm from "@/components/follow-up-form";
+import CompleteFollowUpButton from "@/components/complete-follow-up-button";
 
 import {
   ApiError,
@@ -168,6 +169,15 @@ export default async function CustomerPage({
                   <p className="mt-3 text-xs text-slate-500">
                     Created {formatDate(task.created_at)} · UTC
                   </p>
+
+                  {task.status === "open" && (
+                    <div className="mt-4">
+                      <CompleteFollowUpButton
+                        customerId={customer.id}
+                        taskId={task.id}
+                      />
+                    </div>
+                  )}
                 </li>
               ))}
             </ul>

@@ -201,3 +201,40 @@ def get_customer_follow_ups(
         )
         .all()
     )
+
+@router.patch(
+    "/{customer_id}/follow-ups/{task_id}/complete",
+    response_model=FollowUpTaskResponse,
+)
+def complete_customer_follow_up(
+    customer_id: int,
+    task_id: int,
+    db: Session = Depends(get_db),
+):
+    task = (
+        db.query(FollowUpTask)
+        .filter(
+            FollowUpTask.id == task_id,
+            FollowUpTask.customer_id == customer_id,
+        )
+        .first()
+    )
+
+    if task is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Follow-up not found",
+        )
+
+    task.status = "completed"
+    task.updated_at = datetime.now(timezone.utc)
+
+    try:
+        db.commit()
+    except Exception:
+        db.rollback()
+        raise
+
+    db.refresh(task)
+
+    return task
