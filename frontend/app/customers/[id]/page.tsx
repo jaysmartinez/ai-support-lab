@@ -70,6 +70,12 @@ export default async function CustomerPage({
     healthy: "Healthy",
   };
 
+  const taskStatusStyles: Record<FollowUpTask["status"], string> = {
+    open: "bg-amber-100 text-amber-800",
+    completed: "bg-emerald-100 text-emerald-800",
+    cancelled: "bg-slate-100 text-slate-700",
+  };
+
   const metrics = [
     ["Payment volume", Number(customer.payment_volume).toLocaleString("en-US")],
     [
@@ -157,7 +163,11 @@ export default async function CustomerPage({
                 >
                   <div className="flex items-center justify-between gap-4">
                     <p className="text-sm font-medium">Follow-up #{task.id}</p>
-                    <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium capitalize">
+                    <span
+                      className={`rounded-full px-3 py-1 text-xs font-medium capitalize ${
+                        taskStatusStyles[task.status]
+                      }`}
+                    >
                       {task.status}
                     </span>
                   </div>
@@ -169,7 +179,11 @@ export default async function CustomerPage({
                   <p className="mt-3 text-xs text-slate-500">
                     Created {formatDate(task.created_at)} · UTC
                   </p>
-
+                  {task.status === "completed" && (
+                    <p className="mt-1 text-xs text-emerald-700">
+                      Completed {formatDate(task.updated_at)} · UTC
+                    </p>
+                  )}
                   {task.status === "open" && (
                     <div className="mt-4">
                       <CompleteFollowUpButton

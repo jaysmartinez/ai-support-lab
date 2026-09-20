@@ -128,9 +128,11 @@ export default async function Home({
               );
             })}
           </nav>
-
+          <p className="mb-2 text-xs text-slate-500 sm:hidden">
+            Swipe horizontally to view all customer details.
+          </p>
           <div className="overflow-x-auto rounded-lg border border-slate-200 bg-white">
-            <table className="w-full text-left text-sm">
+            <table className="w-full min-w-[850px] text-left text-sm">
               <caption className="sr-only">
                 Customer accounts ordered by health score
               </caption>
