@@ -154,3 +154,10 @@ class FollowUpTaskResponse(BaseModel):
     updated_at: datetime
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class RiskReviewResponse(BaseModel):
+    customers_scanned: int
+    high_risk_customers: int
+    tasks_created: int
+    tasks_skipped: int

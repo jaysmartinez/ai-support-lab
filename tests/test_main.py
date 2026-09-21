@@ -4,7 +4,7 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
 from database import Base
-from models import Customer
+from models import Customer, FollowUpTask
 from main import app
 from database import get_db
 
@@ -551,6 +551,82 @@ def test_get_customers_with_ordering_and_filtering():
 
         for customer in test_customers:
             db.delete(customer)
+
+        db.commit()
+        db.close()
+
+
+def test_run_risk_review_endpoint_prevents_duplicate_tasks():
+    now = datetime(2026, 9, 21, tzinfo=timezone.utc)
+
+    customer = Customer(
+        name="Risk Review Endpoint Test",
+        industry="fintech",
+        account_owner="Jay Martinez",
+        payment_volume=25000,
+        payment_volume_change_30d=-20,
+        product_usage=80,
+        product_usage_change_30d=-15,
+        open_support_tickets=4,
+        last_login_at=datetime(
+            2026,
+            8,
+            20,
+            tzinfo=timezone.utc,
+        ),
+        features_adopted=3,
+        total_available_features=10,
+        renewal_date=date(2026, 10, 15),
+        health_score=35,
+        risk_level="high",
+        created_at=now,
+        updated_at=now,
+    )
+
+    db = TestingSessionLocal()
+
+    try:
+        db.add(customer)
+        db.commit()
+        db.refresh(customer)
+
+        first_response = client.post("/customers/risk-review")
+
+        assert first_response.status_code == 200
+        assert first_response.json() == {
+            "customers_scanned": 1,
+            "high_risk_customers": 1,
+            "tasks_created": 1,
+            "tasks_skipped": 0,
+        }
+
+        second_response = client.post("/customers/risk-review")
+
+        assert second_response.status_code == 200
+        assert second_response.json() == {
+            "customers_scanned": 1,
+            "high_risk_customers": 1,
+            "tasks_created": 0,
+            "tasks_skipped": 1,
+        }
+
+        tasks = (
+            db.query(FollowUpTask)
+            .filter(FollowUpTask.customer_id == customer.id)
+            .all()
+        )
+
+        assert len(tasks) == 1
+        assert tasks[0].task_type == "automated_risk_review"
+        assert tasks[0].status == "open"
+    finally:
+        db.query(FollowUpTask).filter(
+            FollowUpTask.customer_id == customer.id
+        ).delete()
+
+        db.query(Customer).filter(
+            Customer.id == customer.id
+        ).delete()
 
         db.commit()
         db.close()

@@ -12,8 +12,10 @@ from schemas import (
     CustomerSummaryResponse,
     FollowUpTaskCreate,
     FollowUpTaskResponse,
+    RiskReviewResponse,
 )
 from services.health_score import RiskLevel
+from services.risk_automation import run_risk_review
 
 
 router = APIRouter(
@@ -98,6 +100,21 @@ def get_customer_summary(
         "healthy_customers": summary.healthy or 0,
     }
 
+@router.post(
+    "/risk-review",
+    response_model=RiskReviewResponse,
+)
+def create_risk_review(
+    db: Session = Depends(get_db),
+):
+    result = run_risk_review(db)
+
+    return {
+        "customers_scanned": result.customers_scanned,
+        "high_risk_customers": result.high_risk_customers,
+        "tasks_created": result.tasks_created,
+        "tasks_skipped": result.tasks_skipped,
+    }
 
 @router.get(
     "/{customer_id}",
