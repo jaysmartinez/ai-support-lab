@@ -34,6 +34,13 @@ export interface CustomerSummary {
   healthy_customers: number;
 }
 
+export interface RiskReviewResult {
+  customers_scanned: number;
+  high_risk_customers: number;
+  tasks_created: number;
+  tasks_skipped: number;
+}
+
 const API_BASE_URL = (
   process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"
 ).replace(/\/+$/, "");
@@ -60,6 +67,19 @@ async function getJson<T>(path: string): Promise<T> {
 
 export function getCustomerSummary(): Promise<CustomerSummary> {
   return getJson<CustomerSummary>("/customers/summary");
+}
+
+export async function runRiskReview(): Promise<RiskReviewResult> {
+  const response = await fetch(`${API_BASE_URL}/customers/risk-review`, {
+    method: "POST",
+    signal: AbortSignal.timeout(10000),
+  });
+
+  if (!response.ok) {
+    throw new ApiError(response.status);
+  }
+
+  return response.json() as Promise<RiskReviewResult>;
 }
 
 export function getCustomers(riskLevel?: RiskLevel): Promise<CustomerList> {

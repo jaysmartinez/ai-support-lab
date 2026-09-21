@@ -1,4 +1,5 @@
 import { getCustomers, getCustomerSummary, type RiskLevel } from "@/lib/api";
+import { RiskReviewButton } from "@/components/risk-review-button";
 import Link from "next/link";
 
 const riskLabels: Record<RiskLevel, string> = {
@@ -75,12 +76,18 @@ export default async function Home({
       </header>
 
       <main className="mx-auto max-w-6xl px-6 py-8">
-        <h1 className="text-3xl font-semibold tracking-tight">
-          Customer health
-        </h1>
-        <p className="mt-2 text-slate-600">
-          Know which accounts need attention.
-        </p>
+        <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-start">
+          <div>
+            <h1 className="text-3xl font-semibold tracking-tight">
+              Customer health
+            </h1>
+            <p className="mt-2 text-slate-600">
+              Know which accounts need attention.
+            </p>
+          </div>
+
+          <RiskReviewButton />
+        </div>
 
         <section
           aria-label="Customer health summary"
