@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import FollowUpForm from "@/components/follow-up-form";
 import CompleteFollowUpButton from "@/components/complete-follow-up-button";
+import OutreachDraftButton from "@/components/outreach-draft-button";
 
 import {
   ApiError,
@@ -192,6 +193,13 @@ export default async function CustomerPage({
                       />
                     </div>
                   )}
+                  {task.status === "open" &&
+                    task.task_type === "automated_risk_review" && (
+                      <OutreachDraftButton
+                        customerId={customer.id}
+                        taskId={task.id}
+                      />
+                    )}
                 </li>
               ))}
             </ul>

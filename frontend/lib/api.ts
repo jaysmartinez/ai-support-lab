@@ -111,6 +111,77 @@ export interface FollowUpTask {
   updated_at: string;
 }
 
+export interface OutreachDraft {
+  id: number;
+  follow_up_task_id: number;
+  subject: string;
+  body: string;
+  status: "draft" | "approved" | "sent";
+  model: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export async function generateOutreachDraft(
+  customerId: number,
+  taskId: number,
+): Promise<OutreachDraft> {
+  const response = await fetch(
+    `${API_BASE_URL}/customers/${customerId}/follow-ups/${taskId}/outreach-draft`,
+    {
+      method: "POST",
+      signal: AbortSignal.timeout(60000),
+    },
+  );
+
+  if (!response.ok) {
+    throw new ApiError(response.status);
+  }
+
+  return response.json() as Promise<OutreachDraft>;
+}
+
+export async function updateOutreachDraft(
+  customerId: number,
+  taskId: number,
+  changes: { subject: string; body: string },
+): Promise<OutreachDraft> {
+  const response = await fetch(
+    `${API_BASE_URL}/customers/${customerId}/follow-ups/${taskId}/outreach-draft`,
+    {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(changes),
+      signal: AbortSignal.timeout(10000),
+    },
+  );
+
+  if (!response.ok) {
+    throw new ApiError(response.status);
+  }
+
+  return response.json() as Promise<OutreachDraft>;
+}
+
+export async function approveOutreachDraft(
+  customerId: number,
+  taskId: number,
+): Promise<OutreachDraft> {
+  const response = await fetch(
+    `${API_BASE_URL}/customers/${customerId}/follow-ups/${taskId}/outreach-draft/approve`,
+    {
+      method: "PATCH",
+      signal: AbortSignal.timeout(10000),
+    },
+  );
+
+  if (!response.ok) {
+    throw new ApiError(response.status);
+  }
+
+  return response.json() as Promise<OutreachDraft>;
+}
+
 export async function createFollowUp(
   customerId: number,
   task: FollowUpTaskCreate,

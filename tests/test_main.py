@@ -4,7 +4,7 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
 from database import Base
-from models import Customer, FollowUpTask
+from models import Customer, FollowUpTask, OutreachDraft
 from main import app
 from database import get_db
 
@@ -705,7 +705,62 @@ def test_generate_outreach_draft_endpoint():
         assert response.json()["follow_up_task_id"] == follow_up.id
 
         create_mock.assert_called_once()
+
+        draft = OutreachDraft(
+            follow_up_task_id=follow_up.id,
+            subject="Original subject",
+            body="Original body",
+            status="draft",
+            model="test-model",
+            created_at=now,
+            updated_at=now,
+        )
+        db.add(draft)
+        db.commit()
+
+        draft_url = (
+            f"/customers/{customer.id}"
+            f"/follow-ups/{follow_up.id}/outreach-draft"
+        )
+
+        update_response = client.patch(
+            draft_url,
+            json={
+                "subject": "Revised subject",
+                "body": "Hello, could we schedule a short review?",
+            },
+        )
+
+        assert update_response.status_code == 200
+        assert update_response.json()["subject"] == "Revised subject"
+        assert update_response.json()["body"] == (
+            "Hello, could we schedule a short review?"
+        )
+
+        blank_response = client.patch(
+            draft_url,
+            json={"subject": "   ", "body": "Valid body"},
+        )
+        assert blank_response.status_code == 422
+
+        approve_response = client.patch(f"{draft_url}/approve")
+        assert approve_response.status_code == 200
+        assert approve_response.json()["status"] == "approved"
+
+        approve_again_response = client.patch(f"{draft_url}/approve")
+        assert approve_again_response.status_code == 409
+
+        locked_response = client.patch(
+            draft_url,
+            json={"subject": "Another subject", "body": "Another body"},
+        )
+        assert locked_response.status_code == 409
+
     finally:
+        db.query(OutreachDraft).filter(
+            OutreachDraft.follow_up_task_id == follow_up.id
+        ).delete()
+
         db.query(FollowUpTask).filter(
             FollowUpTask.customer_id == customer.id
         ).delete()

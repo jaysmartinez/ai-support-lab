@@ -20,6 +20,8 @@ services:
       - "8000:8000"
     environment:
       DATABASE_URL: postgresql+psycopg://jay:devpassword@db:5432/ai_support_lab
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      OPENAI_MODEL: ${OPENAI_MODEL:-gpt-5-nano}
     depends_on:
       db:
         condition: service_healthy

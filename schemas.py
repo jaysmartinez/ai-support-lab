@@ -174,3 +174,13 @@ class OutreachDraftResponse(BaseModel):
     updated_at: datetime
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class OutreachDraftUpdate(BaseModel):
+    subject: str = Field(min_length=1, max_length=150)
+    body: str = Field(min_length=1, max_length=5000)
+
+    model_config = ConfigDict(
+        str_strip_whitespace=True,
+        extra="forbid",
+    )

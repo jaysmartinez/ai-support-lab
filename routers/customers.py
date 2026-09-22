@@ -5,7 +5,7 @@ from sqlalchemy import case, func
 from sqlalchemy.orm import Session
 
 from database import get_db
-from models import Customer, FollowUpTask
+from models import Customer, FollowUpTask, OutreachDraft
 from schemas import (
     CustomerListResponse,
     CustomerResponse,
@@ -14,6 +14,7 @@ from schemas import (
     FollowUpTaskResponse,
     OutreachDraftResponse,
     RiskReviewResponse,
+    OutreachDraftUpdate,
 )
 from services.health_score import RiskLevel
 from services.risk_automation import run_risk_review
@@ -220,6 +221,96 @@ def get_customer_follow_ups(
         )
         .all()
     )
+
+@router.patch(
+    "/{customer_id}/follow-ups/{task_id}/outreach-draft",
+    response_model=OutreachDraftResponse,
+)
+def update_customer_outreach_draft(
+    customer_id: int,
+    task_id: int,
+    changes: OutreachDraftUpdate,
+    db: Session = Depends(get_db),
+):
+    draft = (
+        db.query(OutreachDraft)
+        .join(FollowUpTask)
+        .filter(
+            FollowUpTask.id == task_id,
+            FollowUpTask.customer_id == customer_id,
+            OutreachDraft.follow_up_task_id == task_id,
+        )
+        .first()
+    )
+
+    if draft is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Outreach draft not found",
+        )
+
+    if draft.status != "draft":
+        raise HTTPException(
+            status_code=409,
+            detail="Only drafts can be edited",
+        )
+
+    draft.subject = changes.subject
+    draft.body = changes.body
+    draft.updated_at = datetime.now(timezone.utc)
+
+    try:
+        db.commit()
+    except Exception:
+        db.rollback()
+        raise
+
+    db.refresh(draft)
+    return draft
+
+@router.patch(
+    "/{customer_id}/follow-ups/{task_id}/outreach-draft/approve",
+    response_model=OutreachDraftResponse,
+)
+def approve_customer_outreach_draft(
+    customer_id: int,
+    task_id: int,
+    db: Session = Depends(get_db),
+):
+    draft = (
+        db.query(OutreachDraft)
+        .join(FollowUpTask)
+        .filter(
+            FollowUpTask.id == task_id,
+            FollowUpTask.customer_id == customer_id,
+            OutreachDraft.follow_up_task_id == task_id,
+        )
+        .first()
+    )
+
+    if draft is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Outreach draft not found",
+        )
+
+    if draft.status != "draft":
+        raise HTTPException(
+            status_code=409,
+            detail="Only drafts can be approved",
+        )
+
+    draft.status = "approved"
+    draft.updated_at = datetime.now(timezone.utc)
+
+    try:
+        db.commit()
+    except Exception:
+        db.rollback()
+        raise
+
+    db.refresh(draft)
+    return draft
 
 @router.post(
     "/{customer_id}/follow-ups/{task_id}/outreach-draft",
