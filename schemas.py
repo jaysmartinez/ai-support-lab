@@ -161,3 +161,16 @@ class RiskReviewResponse(BaseModel):
     high_risk_customers: int
     tasks_created: int
     tasks_skipped: int
+
+
+class OutreachDraftResponse(BaseModel):
+    id: int
+    follow_up_task_id: int
+    subject: str
+    body: str
+    status: str
+    model: str
+    created_at: datetime
+    updated_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)

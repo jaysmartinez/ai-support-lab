@@ -10,6 +10,8 @@ from database import get_db
 
 from datetime import date, datetime, timezone
 
+from unittest.mock import patch
+
 TEST_DATABASE_URL = "sqlite://"
 
 engine = create_engine(
@@ -619,6 +621,90 @@ def test_run_risk_review_endpoint_prevents_duplicate_tasks():
         assert len(tasks) == 1
         assert tasks[0].task_type == "automated_risk_review"
         assert tasks[0].status == "open"
+    finally:
+        db.query(FollowUpTask).filter(
+            FollowUpTask.customer_id == customer.id
+        ).delete()
+
+        db.query(Customer).filter(
+            Customer.id == customer.id
+        ).delete()
+
+        db.commit()
+        db.close()
+
+
+def test_generate_outreach_draft_endpoint():
+    now = datetime(2026, 9, 21, tzinfo=timezone.utc)
+
+    customer = Customer(
+        name="Outreach Endpoint Test",
+        industry="fintech",
+        account_owner="Jordan Lee",
+        payment_volume=25000,
+        payment_volume_change_30d=-18.5,
+        product_usage=80,
+        product_usage_change_30d=-12,
+        open_support_tickets=4,
+        last_login_at=now,
+        features_adopted=3,
+        total_available_features=10,
+        renewal_date=date(2026, 10, 15),
+        health_score=35,
+        risk_level="high",
+        created_at=now,
+        updated_at=now,
+    )
+
+    db = TestingSessionLocal()
+
+    try:
+        db.add(customer)
+        db.commit()
+        db.refresh(customer)
+
+        follow_up = FollowUpTask(
+            customer_id=customer.id,
+            task_type="automated_risk_review",
+            recommended_action="Schedule a customer health review.",
+            status="open",
+            created_at=now,
+            updated_at=now,
+        )
+
+        db.add(follow_up)
+        db.commit()
+        db.refresh(follow_up)
+
+        saved_draft = {
+            "id": 1,
+            "follow_up_task_id": follow_up.id,
+            "subject": "Let’s review your account",
+            "body": (
+                "Hello, I would like to schedule a short account review."
+            ),
+            "status": "draft",
+            "model": "test-model",
+            "created_at": now,
+            "updated_at": now,
+        }
+
+        with patch(
+            "routers.customers.create_outreach_draft",
+            return_value=saved_draft,
+        ) as create_mock:
+            response = client.post(
+                f"/customers/{customer.id}"
+                f"/follow-ups/{follow_up.id}/outreach-draft"
+            )
+
+        assert response.status_code == 200
+        assert response.json()["subject"] == saved_draft["subject"]
+        assert response.json()["body"] == saved_draft["body"]
+        assert response.json()["status"] == "draft"
+        assert response.json()["follow_up_task_id"] == follow_up.id
+
+        create_mock.assert_called_once()
     finally:
         db.query(FollowUpTask).filter(
             FollowUpTask.customer_id == customer.id

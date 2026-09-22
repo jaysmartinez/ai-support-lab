@@ -162,9 +162,50 @@ class FollowUpTask(Base):
         back_populates="follow_up_tasks",
     )
 
+    outreach_draft = relationship(
+        "OutreachDraft",
+        back_populates="follow_up_task",
+        cascade="all, delete-orphan",
+        uselist=False,
+    )
+
     __table_args__ = (
         CheckConstraint(
             "status IN ('open', 'completed', 'cancelled')",
             name="ck_follow_up_tasks_status_valid",
+        ),
+    )
+
+
+class OutreachDraft(Base):
+    __tablename__ = "outreach_drafts"
+
+    id = Column(Integer, primary_key=True, index=True)
+
+    follow_up_task_id = Column(
+        Integer,
+        ForeignKey("follow_up_tasks.id", ondelete="CASCADE"),
+        nullable=False,
+        unique=True,
+        index=True,
+    )
+
+    subject = Column(String(150), nullable=False)
+    body = Column(Text, nullable=False)
+    status = Column(String(20), nullable=False, default="draft")
+    model = Column(String(100), nullable=False)
+
+    created_at = Column(DateTime(timezone=True), nullable=False)
+    updated_at = Column(DateTime(timezone=True), nullable=False)
+
+    follow_up_task = relationship(
+        "FollowUpTask",
+        back_populates="outreach_draft",
+    )
+
+    __table_args__ = (
+        CheckConstraint(
+            "status IN ('draft', 'approved', 'sent')",
+            name="ck_outreach_drafts_status_valid",
         ),
     )

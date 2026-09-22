@@ -12,10 +12,12 @@ from schemas import (
     CustomerSummaryResponse,
     FollowUpTaskCreate,
     FollowUpTaskResponse,
+    OutreachDraftResponse,
     RiskReviewResponse,
 )
 from services.health_score import RiskLevel
 from services.risk_automation import run_risk_review
+from services.outreach_draft import create_outreach_draft
 
 
 router = APIRouter(
@@ -218,6 +220,49 @@ def get_customer_follow_ups(
         )
         .all()
     )
+
+@router.post(
+    "/{customer_id}/follow-ups/{task_id}/outreach-draft",
+    response_model=OutreachDraftResponse,
+)
+def generate_customer_outreach_draft(
+    customer_id: int,
+    task_id: int,
+    db: Session = Depends(get_db),
+):
+    customer = (
+        db.query(Customer)
+        .filter(Customer.id == customer_id)
+        .first()
+    )
+
+    if customer is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Customer not found",
+        )
+
+    follow_up = (
+        db.query(FollowUpTask)
+        .filter(
+            FollowUpTask.id == task_id,
+            FollowUpTask.customer_id == customer_id,
+        )
+        .first()
+    )
+
+    if follow_up is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Follow-up not found",
+        )
+
+    return create_outreach_draft(
+        db,
+        customer,
+        follow_up,
+    )
+
 
 @router.patch(
     "/{customer_id}/follow-ups/{task_id}/complete",
