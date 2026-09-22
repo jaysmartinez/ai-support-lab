@@ -120,6 +120,7 @@ export interface OutreachDraft {
   model: string;
   created_at: string;
   updated_at: string;
+  approved_at: string | null;
 }
 
 export async function generateOutreachDraft(

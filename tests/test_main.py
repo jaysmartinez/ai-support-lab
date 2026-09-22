@@ -746,6 +746,7 @@ def test_generate_outreach_draft_endpoint():
         approve_response = client.patch(f"{draft_url}/approve")
         assert approve_response.status_code == 200
         assert approve_response.json()["status"] == "approved"
+        assert approve_response.json()["approved_at"] is not None
 
         approve_again_response = client.patch(f"{draft_url}/approve")
         assert approve_again_response.status_code == 409

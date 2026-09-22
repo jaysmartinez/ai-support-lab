@@ -300,8 +300,11 @@ def approve_customer_outreach_draft(
             detail="Only drafts can be approved",
         )
 
+    approved_at = datetime.now(timezone.utc)
+
     draft.status = "approved"
-    draft.updated_at = datetime.now(timezone.utc)
+    draft.approved_at = approved_at
+    draft.updated_at = approved_at
 
     try:
         db.commit()

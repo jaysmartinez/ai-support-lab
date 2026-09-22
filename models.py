@@ -197,6 +197,7 @@ class OutreachDraft(Base):
 
     created_at = Column(DateTime(timezone=True), nullable=False)
     updated_at = Column(DateTime(timezone=True), nullable=False)
+    approved_at = Column(DateTime(timezone=True), nullable=True)
 
     follow_up_task = relationship(
         "FollowUpTask",

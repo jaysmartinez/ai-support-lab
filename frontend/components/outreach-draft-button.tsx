@@ -193,7 +193,16 @@ export default function OutreachDraftButton({
             </div>
           ) : (
             <p role="status" className="text-sm font-medium text-emerald-700">
-              Draft {draft.status}. No email has been sent.
+              {draft.status === "approved" && draft.approved_at
+                ? `Approved ${new Date(draft.approved_at).toLocaleString(
+                    "en-US",
+                    {
+                      dateStyle: "medium",
+                      timeStyle: "short",
+                      timeZone: "UTC",
+                    },
+                  )} UTC. No email has been sent.`
+                : `Draft status: ${draft.status}.`}
             </p>
           )}
 
