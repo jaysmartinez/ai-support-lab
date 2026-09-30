@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import FollowUpForm from "@/components/follow-up-form";
 import CompleteFollowUpButton from "@/components/complete-follow-up-button";
 import OutreachDraftButton from "@/components/outreach-draft-button";
+import { requireUser } from "@/lib/require-user";
 
 import {
   ApiError,
@@ -28,6 +29,8 @@ export default async function CustomerPage({
 }: {
   params: Promise<{ id: string }>;
 }) {
+  await requireUser();
+
   const { id } = await params;
 
   if (!/^[1-9]\d*$/.test(id) || !Number.isSafeInteger(Number(id))) {

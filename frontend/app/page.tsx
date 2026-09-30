@@ -1,5 +1,7 @@
 import { getCustomers, getCustomerSummary, type RiskLevel } from "@/lib/api";
 import { RiskReviewButton } from "@/components/risk-review-button";
+import { requireUser } from "@/lib/require-user";
+import { LogoutButton } from "@/components/logout-button";
 import Link from "next/link";
 
 const riskLabels: Record<RiskLevel, string> = {
@@ -25,6 +27,8 @@ export default async function Home({
     risk?: string | string[];
   }>;
 }) {
+  await requireUser();
+
   const { risk } = await searchParams;
 
   const selectedRisk: RiskLevel | undefined =
@@ -71,7 +75,7 @@ export default async function Home({
       <header className="border-b border-slate-200 bg-white">
         <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-6 py-5">
           <span className="font-semibold">Customer Health Monitor</span>
-          <span className="text-sm text-slate-500">Demo workspace</span>
+          <LogoutButton />
         </div>
       </header>
 
