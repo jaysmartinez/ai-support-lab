@@ -772,3 +772,30 @@ def test_generate_outreach_draft_endpoint():
 
         db.commit()
         db.close()
+
+
+def test_register_user_hashes_password():
+    from models import User
+    from routers.auth import password_hash
+
+    email = "registration-test@example.com"
+    db = TestingSessionLocal()
+
+    try:
+        response = client.post(
+            "/auth/register",
+            json={"email": email, "password": "test-password"},
+        )
+
+        assert response.status_code == 201
+        assert response.json()["email"] == email
+        assert "password" not in response.json()
+        assert "hashed_password" not in response.json()
+
+        user = db.query(User).filter(User.email == email).one()
+        assert user.hashed_password.startswith("$argon2")
+        assert password_hash.verify("test-password", user.hashed_password)
+    finally:
+        db.query(User).filter(User.email == email).delete()
+        db.commit()
+        db.close()

@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException
-from passlib.context import CryptContext
+from pwdlib import PasswordHash
 from sqlalchemy.orm import Session
 
 from database import get_db
@@ -11,10 +11,7 @@ router = APIRouter(
     tags=["auth"],
 )
 
-pwd_context = CryptContext(
-    schemes=["bcrypt"],
-    deprecated="auto",
-)
+password_hash = PasswordHash.recommended()
 
 
 @router.post(
@@ -38,7 +35,7 @@ def register_user(
             detail="Email already registered",
         )
 
-    hashed_password = pwd_context.hash(user.password)
+    hashed_password = password_hash.hash(user.password)
 
     new_user = User(
         email=user.email,
