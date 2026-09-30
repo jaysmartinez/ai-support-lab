@@ -75,6 +75,7 @@ class Customer(Base):
     name = Column(String(255), nullable=False, unique=True, index=True)
     industry = Column(String(100), nullable=False)
     account_owner = Column(String(255), nullable=False)
+    contact_email = Column(String(255), nullable=True)
 
     payment_volume = Column(Numeric(14, 2), nullable=False)
     payment_volume_change_30d = Column(Float, nullable=False)
