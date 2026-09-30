@@ -799,3 +799,123 @@ def test_register_user_hashes_password():
         db.query(User).filter(User.email == email).delete()
         db.commit()
         db.close()
+
+
+def test_authenticate_user():
+    from models import User
+    from routers.auth import authenticate_user, password_hash
+
+    email = "auth-helper-test@example.com"
+    db = TestingSessionLocal()
+
+    try:
+        user = User(
+            email=email,
+            hashed_password=password_hash.hash("correct-password"),
+        )
+        db.add(user)
+        db.commit()
+        db.refresh(user)
+
+        assert authenticate_user(db, email, "correct-password").id == user.id
+        assert authenticate_user(db, email, "wrong-password") is None
+        assert authenticate_user(db, "unknown@example.com", "correct-password") is None
+    finally:
+        db.rollback()
+        db.query(User).filter(User.email == email).delete()
+        db.commit()
+        db.close()
+
+
+def test_login_endpoint(monkeypatch):
+    import jwt
+
+    from models import User
+
+    email = "login-endpoint-test@example.com"
+    test_secret = "t" * 64
+    monkeypatch.setenv("JWT_SECRET_KEY", test_secret)
+    db = TestingSessionLocal()
+
+    try:
+        registration = client.post(
+            "/auth/register",
+            json={"email": email, "password": "correct-password"},
+        )
+        assert registration.status_code == 201
+
+        login = client.post(
+            "/auth/login",
+            json={"email": email, "password": "correct-password"},
+        )
+        assert login.status_code == 200
+        assert login.json()["token_type"] == "bearer"
+
+        claims = jwt.decode(
+            login.json()["access_token"],
+            test_secret,
+            algorithms=["HS256"],
+        )
+        assert claims["sub"] == str(registration.json()["id"])
+
+        wrong_password = client.post(
+            "/auth/login",
+            json={"email": email, "password": "wrong-password"},
+        )
+        assert wrong_password.status_code == 401
+
+        unknown_email = client.post(
+            "/auth/login",
+            json={"email": "unknown@example.com", "password": "correct-password"},
+        )
+        assert unknown_email.status_code == 401
+    finally:
+        db.rollback()
+        db.query(User).filter(User.email == email).delete()
+        db.commit()
+        db.close()
+
+
+def test_me_requires_valid_bearer_token(monkeypatch):
+    from models import User
+
+    email = "me-endpoint-test@example.com"
+    monkeypatch.setenv("JWT_SECRET_KEY", "m" * 64)
+    db = TestingSessionLocal()
+
+    try:
+        registration = client.post(
+            "/auth/register",
+            json={"email": email, "password": "correct-password"},
+        )
+        assert registration.status_code == 201
+
+        missing_token = client.get("/auth/me")
+        assert missing_token.status_code == 401
+
+        invalid_token = client.get(
+            "/auth/me",
+            headers={"Authorization": "Bearer invalid-token"},
+        )
+        assert invalid_token.status_code == 401
+
+        login = client.post(
+            "/auth/login",
+            json={"email": email, "password": "correct-password"},
+        )
+        assert login.status_code == 200
+
+        valid_token = client.get(
+            "/auth/me",
+            headers={
+                "Authorization": f"Bearer {login.json()['access_token']}"
+            },
+        )
+        assert valid_token.status_code == 200
+        assert valid_token.json()["email"] == email
+        assert valid_token.json()["id"] == registration.json()["id"]
+    finally:
+        db.rollback()
+        db.query(User).filter(User.email == email).delete()
+        db.commit()
+        db.close()
