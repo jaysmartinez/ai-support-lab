@@ -20,6 +20,7 @@ from services.health_score import RiskLevel
 from services.risk_automation import run_risk_review
 from services.outreach_draft import create_outreach_draft
 
+from routers.auth import get_current_user
 
 router = APIRouter(
     prefix="/customers",
@@ -106,7 +107,9 @@ def get_customer_summary(
 @router.post(
     "/risk-review",
     response_model=RiskReviewResponse,
+    dependencies=[Depends(get_current_user)],
 )
+
 def create_risk_review(
     db: Session = Depends(get_db),
 ):

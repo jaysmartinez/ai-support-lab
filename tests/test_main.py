@@ -558,7 +558,11 @@ def test_get_customers_with_ordering_and_filtering():
         db.close()
 
 
-def test_run_risk_review_endpoint_prevents_duplicate_tasks():
+def test_run_risk_review_endpoint_prevents_duplicate_tasks(monkeypatch):
+    from models import User
+    from services.auth_tokens import create_access_token
+
+    monkeypatch.setenv("JWT_SECRET_KEY", "r" * 64)
     now = datetime(2026, 9, 21, tzinfo=timezone.utc)
 
     customer = Customer(
@@ -570,12 +574,7 @@ def test_run_risk_review_endpoint_prevents_duplicate_tasks():
         product_usage=80,
         product_usage_change_30d=-15,
         open_support_tickets=4,
-        last_login_at=datetime(
-            2026,
-            8,
-            20,
-            tzinfo=timezone.utc,
-        ),
+        last_login_at=datetime(2026, 8, 20, tzinfo=timezone.utc),
         features_adopted=3,
         total_available_features=10,
         renewal_date=date(2026, 10, 15),
@@ -584,16 +583,28 @@ def test_run_risk_review_endpoint_prevents_duplicate_tasks():
         created_at=now,
         updated_at=now,
     )
-
+    test_user = User(
+        email="risk-review-endpoint@example.test",
+        hashed_password="not-used-in-this-test",
+    )
     db = TestingSessionLocal()
 
     try:
-        db.add(customer)
+        db.add_all([customer, test_user])
         db.commit()
         db.refresh(customer)
+        db.refresh(test_user)
 
-        first_response = client.post("/customers/risk-review")
+        assert client.post("/customers/risk-review").status_code == 401
 
+        headers = {
+            "Authorization": f"Bearer {create_access_token(test_user.id)}"
+        }
+
+        first_response = client.post(
+            "/customers/risk-review",
+            headers=headers,
+        )
         assert first_response.status_code == 200
         assert first_response.json() == {
             "customers_scanned": 1,
@@ -602,8 +613,10 @@ def test_run_risk_review_endpoint_prevents_duplicate_tasks():
             "tasks_skipped": 0,
         }
 
-        second_response = client.post("/customers/risk-review")
-
+        second_response = client.post(
+            "/customers/risk-review",
+            headers=headers,
+        )
         assert second_response.status_code == 200
         assert second_response.json() == {
             "customers_scanned": 1,
@@ -617,19 +630,16 @@ def test_run_risk_review_endpoint_prevents_duplicate_tasks():
             .filter(FollowUpTask.customer_id == customer.id)
             .all()
         )
-
         assert len(tasks) == 1
         assert tasks[0].task_type == "automated_risk_review"
         assert tasks[0].status == "open"
     finally:
+        db.rollback()
         db.query(FollowUpTask).filter(
             FollowUpTask.customer_id == customer.id
         ).delete()
-
-        db.query(Customer).filter(
-            Customer.id == customer.id
-        ).delete()
-
+        db.query(Customer).filter(Customer.id == customer.id).delete()
+        db.query(User).filter(User.id == test_user.id).delete()
         db.commit()
         db.close()
 

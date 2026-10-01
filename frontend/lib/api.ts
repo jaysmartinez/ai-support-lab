@@ -70,7 +70,7 @@ export function getCustomerSummary(): Promise<CustomerSummary> {
 }
 
 export async function runRiskReview(): Promise<RiskReviewResult> {
-  const response = await fetch(`${API_BASE_URL}/customers/risk-review`, {
+  const response = await fetch("/api/risk-review", {
     method: "POST",
     signal: AbortSignal.timeout(10000),
   });
